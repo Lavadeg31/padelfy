@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,7 @@ export default function Leaderboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       setError(null)
       const { data: { user } } = await supabase.auth.getUser()
@@ -142,7 +142,7 @@ export default function Leaderboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   useEffect(() => {
     loadStats();
