@@ -37,10 +37,10 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Rate limiting: Only allow one attempt every 60 seconds
+    // Rate limiting: Only allow one attempt every 10 seconds
     const now = Date.now()
-    if (isSignUp && now - lastAttempt < 60000) {
-      const remainingSeconds = Math.ceil((60000 - (now - lastAttempt)) / 1000)
+    if (isSignUp && now - lastAttempt < 10000) {
+      const remainingSeconds = Math.ceil((10000 - (now - lastAttempt)) / 1000)
       setError(`Please wait ${remainingSeconds} seconds before trying again`)
       return
     }
