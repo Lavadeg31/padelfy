@@ -117,7 +117,7 @@ export default function Tournaments() {
         {tournaments.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
-              <p>You haven't created any tournaments yet.</p>
+              <p>You haven&apos;t created any tournaments yet.</p>
               <Button onClick={() => router.push('/')}>Create Your First Tournament</Button>
             </CardContent>
           </Card>
