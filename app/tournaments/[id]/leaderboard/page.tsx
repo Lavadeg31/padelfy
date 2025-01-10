@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,13 +57,10 @@ export default function TournamentLeaderboard({ params }: { params: { id: string
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    loadStats()
-  }, [params.id])
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       setError(null)
+      await supabase.auth.getUser()
       // Load tournament details first
       const { data: tournamentData, error: tournamentError } = await supabase
         .from('tournaments')
@@ -228,7 +225,11 @@ export default function TournamentLeaderboard({ params }: { params: { id: string
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, params.id])
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading leaderboard...</div>
