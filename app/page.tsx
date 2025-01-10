@@ -1,101 +1,386 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+import { TopNav } from '@/components/top-nav'
+import { MetricCard } from '@/components/metric-card'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Users, CrownIcon as Court, Trophy } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import { generateSchedule } from '@/utils/scheduleGenerator'
+
+interface Court {
+  id: number;
+  name: string;
+}
+
+interface Tournament {
+  id: string;
+  name: string;
+  mode: 'solo' | 'fixed';
+  total_points: number;
+  courts: Court[];
+  players: string[];
+}
+
+type TournamentMode = 'solo' | 'fixed'
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [courts, setCourts] = useState<Court[]>([{ id: 1, name: '' }])
+  const [players, setPlayers] = useState<string[]>(['', ''])
+  const [mode, setMode] = useState<TournamentMode>('fixed')
+  const [totalPoints, setTotalPoints] = useState<number>(5)
+  const [tournamentName, setTournamentName] = useState('')
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const router = useRouter()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    loadTournaments()
+  }, [])
+
+  const loadTournaments = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error loading tournaments:', error)
+      return
+    }
+
+    setTournaments(data)
+  }
+
+  const handleAddCourt = () => {
+    setCourts([...courts, { id: courts.length + 1, name: '' }])
+  }
+
+  const handleCourtNameChange = (id: number, name: string) => {
+    setCourts(courts.map(court => 
+      court.id === id ? { ...court, name } : court
+    ))
+  }
+
+  const handleAddPlayer = () => {
+    if (mode === 'fixed') {
+      setPlayers([...players, '', ''])
+    } else {
+      setPlayers([...players, ''])
+    }
+  }
+
+  const handlePlayerChange = (index: number, value: string) => {
+    const newPlayers = [...players]
+    newPlayers[index] = value
+    setPlayers(newPlayers)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const validCourts = courts.filter(court => court.name.trim() !== '')
+    const validPlayers = players.filter(player => player.trim() !== '')
+    
+    if (!tournamentName.trim()) {
+      alert('Please enter a tournament name')
+      return
+    }
+
+    if (mode === 'fixed') {
+      if (validPlayers.length < 4 || validPlayers.length % 2 !== 0) {
+        alert('Please add at least 2 complete teams (4 players)')
+        return
+      }
+    } else {
+      if (validPlayers.length < 4) {
+        alert('Please add at least 4 players')
+        return
+      }
+    }
+    
+    if (validCourts.length === 0) {
+      alert('Please add at least one court with a name')
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('Please log in to create a tournament')
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .insert({
+          name: tournamentName,
+          mode,
+          total_points: totalPoints,
+          courts: validCourts,
+          players: validPlayers,
+          user_id: user.id
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating tournament:', error)
+        alert(`Failed to create tournament: ${error.message}`)
+        return
+      }
+
+      const schedule = generateSchedule(validPlayers, validCourts, mode)
+      const { error: scheduleError } = await supabase
+        .from('tournament_schedules')
+        .insert(
+          schedule.flatMap((round, roundIndex) =>
+            round.map(game => ({
+              tournament_id: data.id,
+              round: roundIndex + 1,
+              court: game.court,
+              team1: game.team1,
+              team2: game.team2
+            }))
+          )
+        )
+
+      if (scheduleError) {
+        console.error('Error creating schedule:', scheduleError)
+        alert(`Failed to create schedule: ${scheduleError.message}`)
+        return
+      }
+
+      // Redirect to the schedule page after successful creation
+      router.push(`/tournaments/${data.id}/schedule`)
+    } catch (error) {
+      console.error('Error:', error)
+      alert('An unexpected error occurred')
+    }
+  }
+
+  const renderPlayerInputs = () => {
+    if (mode === 'fixed') {
+      return players.map((player, index) => (
+        index % 2 === 0 && (
+          <div key={index} className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label>{`Player ${Math.floor(index / 2) + 1}A`}</Label>
+              <Input
+                value={player}
+                onChange={(e) => handlePlayerChange(index, e.target.value)}
+                placeholder="Player Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{`Player ${Math.floor(index / 2) + 1}B`}</Label>
+              <Input
+                value={players[index + 1] || ''}
+                onChange={(e) => handlePlayerChange(index + 1, e.target.value)}
+                placeholder="Player Name"
+              />
+            </div>
+          </div>
+        )
+      ))
+    } else {
+      return players.map((player, index) => (
+        <div key={index} className="space-y-2">
+          <Label>{`Player ${index + 1}`}</Label>
+          <Input
+            value={player}
+            onChange={(e) => handlePlayerChange(index, e.target.value)}
+            placeholder="Player Name"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      ))
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      <div className="container mx-auto p-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
+          <MetricCard
+            title="Total Players"
+            value={players.filter(p => p).length}
+            icon={<Users className="h-4 w-4 text-muted-foreground" />}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <MetricCard
+            title="Available Courts"
+            value={courts.filter(c => c.name).length}
+            icon={<Court className="h-4 w-4 text-muted-foreground" />}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <MetricCard
+            title="Games per Round"
+            value={Math.floor(players.filter(p => p).length / 4)}
+            icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <Drawer>
+            <DrawerTrigger asChild>
+              <Button variant="outline" className="w-full h-full">
+                View Tournaments
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>Your Tournaments</DrawerTitle>
+              </DrawerHeader>
+              <div className="p-4">
+                <Carousel>
+                  <CarouselContent>
+                    {tournaments.map((tournament) => (
+                      <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>{tournament.name}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                              <p>Mode: {tournament.mode}</p>
+                              <p>Players: {tournament.players.length}</p>
+                              <p>Courts: {tournament.courts.length}</p>
+                              <p>Points to win: {tournament.total_points}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button 
+                                variant="default" 
+                                onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
+                                className="w-full"
+                              >
+                                Open
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
+                                className="w-full"
+                              >
+                                Leaderboard
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </div>
+
+        <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tournament Setup</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tournament Name</Label>
+                <Input
+                  value={tournamentName}
+                  onChange={(e) => setTournamentName(e.target.value)}
+                  placeholder="Enter tournament name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tournament Mode</Label>
+                <RadioGroup value={mode} onValueChange={(value: TournamentMode) => setMode(value)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fixed" id="fixed" />
+                    <Label htmlFor="fixed">Fixed Teams</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="solo" id="solo" />
+                    <Label htmlFor="solo">Solo (Random Partners)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="total-points">Total Points per Game</Label>
+                <Select value={totalPoints.toString()} onValueChange={(value) => setTotalPoints(parseInt(value))}>
+                  <SelectTrigger id="total-points">
+                    <SelectValue placeholder="Select total points" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((points) => (
+                      <SelectItem key={points} value={points.toString()}>
+                        {points} points
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {courts.map((court) => (
+                <div key={court.id} className="space-y-2">
+                  <Label htmlFor={`court-${court.id}`}>Court {court.id} Name</Label>
+                  <Input
+                    id={`court-${court.id}`}
+                    value={court.name}
+                    onChange={(e) => handleCourtNameChange(court.id, e.target.value)}
+                    placeholder="e.g., Center Court"
+                  />
+                </div>
+              ))}
+              <Button type="button" onClick={handleAddCourt} variant="outline">
+                Add Court
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Players Registration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {renderPlayerInputs()}
+              <Button 
+                type="button" 
+                onClick={handleAddPlayer} 
+                variant="outline"
+              >
+                Add {mode === 'fixed' ? 'Team' : 'Player'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Button type="submit" className="md:col-span-2">
+            Generate Schedule
+          </Button>
+        </form>
+      </div>
     </div>
-  );
+  )
 }
+
