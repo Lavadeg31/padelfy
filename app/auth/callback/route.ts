@@ -1,25 +1,16 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
   if (code) {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    
-    try {
-      await supabase.auth.exchangeCodeForSession(code)
-    } catch (error) {
-      console.error('Error exchanging code for session:', error)
-      // Redirect to login with error
-      return NextResponse.redirect(new URL('/login?error=verification_failed', request.url))
-    }
+    const supabase = createRouteHandlerClient({ cookies })
+    await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // Redirect to home page after successful verification
-  return NextResponse.redirect(new URL('/', request.url))
+  // URL to redirect to after sign in process completes
+  return NextResponse.redirect(new URL('/', requestUrl.origin))
 } 
