@@ -272,21 +272,18 @@ function generateFixedSchedule(players: string[], courts: Court[]): Game[][] {
   const rounds: Game[][] = [];
   const numTeams = teams.length;
   const numRounds = numTeams - 1;
+  const teamsPerRound = Math.floor(numTeams / 2);
 
   // For each round
   for (let round = 0; round < numRounds; round++) {
     const roundGames: Game[] = [];
-    const availableTeams = [...teams];
     
-    // Create games until no more teams are available
-    while (availableTeams.length >= 2) {
-      const team1 = availableTeams.shift()!;
-      const team2 = availableTeams.shift()!;
-      
+    // Create games for this round
+    for (let i = 0; i < teamsPerRound; i++) {
       roundGames.push({
-        court: courts[roundGames.length % courts.length],
-        team1,
-        team2
+        court: courts[i % courts.length],
+        team1: teams[i],
+        team2: teams[numTeams - 1 - i]
       });
     }
 
@@ -294,8 +291,13 @@ function generateFixedSchedule(players: string[], courts: Court[]): Game[][] {
       rounds.push(roundGames);
     }
 
-    // Rotate teams for next round (keep first team fixed)
-    teams.push(teams.splice(1, 1)[0]);
+    // Rotate teams: keep first team fixed, rotate all others
+    const firstTeam = teams[0];
+    const lastTeam = teams[teams.length - 1];
+    for (let i = teams.length - 1; i > 1; i--) {
+      teams[i] = teams[i - 1];
+    }
+    teams[1] = lastTeam;
   }
 
   return rounds;
