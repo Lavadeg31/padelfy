@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { TopNav } from '@/components/top-nav'
 import { MetricCard } from '@/components/metric-card'
 import { Button } from "@/components/ui/button"
@@ -58,11 +58,7 @@ export default function Home() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    loadTournaments()
-  }, [])
-
-  const loadTournaments = async () => {
+  const loadTournaments = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -78,7 +74,11 @@ export default function Home() {
     }
 
     setTournaments(data)
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    loadTournaments()
+  }, [loadTournaments])
 
   const handleAddCourt = () => {
     setCourts([...courts, { id: courts.length + 1, name: '' }])
