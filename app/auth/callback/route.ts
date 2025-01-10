@@ -8,7 +8,16 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createRouteHandlerClient({ cookies })
-    await supabase.auth.exchangeCodeForSession(code)
+    try {
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) {
+        console.error('Error exchanging code for session:', error)
+        return NextResponse.redirect(new URL('/login?error=verification_failed', requestUrl.origin))
+      }
+    } catch (error) {
+      console.error('Error in callback:', error)
+      return NextResponse.redirect(new URL('/login?error=verification_failed', requestUrl.origin))
+    }
   }
 
   // URL to redirect to after sign in process completes
