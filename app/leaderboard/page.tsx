@@ -43,10 +43,6 @@ export default function Leaderboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    loadStats()
-  }, [])
-
   const loadStats = async () => {
     try {
       setError(null)
@@ -147,6 +143,10 @@ export default function Leaderboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   if (loading) {
     return (
