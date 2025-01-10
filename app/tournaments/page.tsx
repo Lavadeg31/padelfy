@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { toast } from "sonner"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 interface Tournament {
   id: string
@@ -132,50 +133,56 @@ export default function Tournaments() {
               <DrawerTitle>Your Tournaments</DrawerTitle>
             </DrawerHeader>
             <div className="p-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {tournaments.map((tournament) => (
-                  <Card key={tournament.id}>
-                    <CardHeader className="relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(tournament.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <CardTitle>{tournament.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <p>Mode: {tournament.mode}</p>
-                        <p>Players: {tournament.players.length}</p>
-                        <p>Courts: {tournament.courts.length}</p>
-                        <p>Points to win: {tournament.total_points}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button 
-                          variant="default" 
-                          onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
-                          className="w-full"
-                        >
-                          Open
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
-                          className="w-full"
-                        >
-                          Leaderboard
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <Carousel className="w-full">
+                <CarouselContent className="-ml-1">
+                  {tournaments.map((tournament) => (
+                    <CarouselItem key={tournament.id} className="pl-1 basis-full sm:basis-1/2 lg:basis-1/3">
+                      <Card>
+                        <CardHeader className="relative">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(tournament.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <CardTitle>{tournament.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <p>Mode: {tournament.mode}</p>
+                            <p>Players: {tournament.players.length}</p>
+                            <p>Courts: {tournament.courts.length}</p>
+                            <p>Points to win: {tournament.total_points}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button 
+                              variant="default" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
+                              className="w-full"
+                            >
+                              Open
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
+                              className="w-full"
+                            >
+                              Leaderboard
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
             </div>
           </DrawerContent>
         </Drawer>
