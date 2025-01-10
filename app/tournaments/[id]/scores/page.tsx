@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,13 +40,10 @@ export default function TournamentScores({ params }: { params: { id: string } })
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    loadGames()
-  }, [params.id])
-
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     try {
       setError(null)
+      await supabase.auth.getUser()
       // Load tournament details first
       const { data: tournamentData, error: tournamentError } = await supabase
         .from('tournaments')
@@ -87,7 +84,11 @@ export default function TournamentScores({ params }: { params: { id: string } })
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, params.id])
+
+  useEffect(() => {
+    loadGames();
+  }, [loadGames]);
 
   const handleScoreChange = async (gameId: string, team: 'team1' | 'team2', score: string) => {
     const numericScore = score === '' ? null : parseInt(score, 10)
