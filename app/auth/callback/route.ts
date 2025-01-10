@@ -12,14 +12,23 @@ export async function GET(request: Request) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) {
         console.error('Error exchanging code for session:', error)
-        return NextResponse.redirect(new URL('/login?error=verification_failed', requestUrl.origin))
+        const redirectUrl = process.env.NODE_ENV === 'production'
+          ? 'https://padel.larsv.tech/login?error=verification_failed'
+          : `${requestUrl.origin}/login?error=verification_failed`
+        return NextResponse.redirect(redirectUrl)
       }
     } catch (error) {
       console.error('Error in callback:', error)
-      return NextResponse.redirect(new URL('/login?error=verification_failed', requestUrl.origin))
+      const redirectUrl = process.env.NODE_ENV === 'production'
+        ? 'https://padel.larsv.tech/login?error=verification_failed'
+        : `${requestUrl.origin}/login?error=verification_failed`
+      return NextResponse.redirect(redirectUrl)
     }
   }
 
   // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL('/', requestUrl.origin))
+  const redirectUrl = process.env.NODE_ENV === 'production'
+    ? 'https://padel.larsv.tech'
+    : requestUrl.origin
+  return NextResponse.redirect(redirectUrl)
 } 
