@@ -15,6 +15,7 @@ export default function Login() {
   const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [lastSignupAttempt, setLastSignupAttempt] = useState<number>(0)
   const router = useRouter()
 
   // Create Supabase client once and memoize it
@@ -35,6 +36,17 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Add rate limiting for signup
+    if (isSignUp) {
+      const now = Date.now()
+      const timeSinceLastAttempt = now - lastSignupAttempt
+      if (timeSinceLastAttempt < 30000) { // 30 seconds
+        setError(`Please wait ${Math.ceil((30000 - timeSinceLastAttempt) / 1000)} seconds before trying again`)
+        return
+      }
+      setLastSignupAttempt(now)
+    }
 
     // Input validation
     if (!email || !password) {
@@ -61,7 +73,12 @@ export default function Login() {
           }
         })
         
-        if (signUpError) throw signUpError
+        if (signUpError) {
+          if (signUpError.message.includes('rate limit')) {
+            throw new Error('Please wait a few minutes before trying again')
+          }
+          throw signUpError
+        }
         
         setMessage('Check your email for the confirmation link!')
         setEmail('')
