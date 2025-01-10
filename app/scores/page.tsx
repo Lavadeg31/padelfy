@@ -46,7 +46,7 @@ export default function Scores() {
     if (savedScores.length === savedSchedule.length) {
       setScores(savedScores)
     } else {
-      const initialScores = savedSchedule.map((round: any[]) => 
+      const initialScores = savedSchedule.map((round: Game[]) => 
         round.map(() => ({ team1Score: 0, team2Score: 0 }))
       )
       setScores(initialScores)
@@ -66,9 +66,7 @@ export default function Scores() {
     const numericValue = Math.min(Math.max(0, parseInt(value) || 0), totalPoints);
     const otherTeam = team === 'team1Score' ? 'team2Score' : 'team1Score';
 
-    // Update the entered score
     newScores[currentRound][gameIndex][team] = numericValue;
-    // Calculate and update the other team's score
     newScores[currentRound][gameIndex][otherTeam] = totalPoints - numericValue;
 
     setScores(newScores);
