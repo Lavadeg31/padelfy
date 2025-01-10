@@ -6,7 +6,7 @@ import { MetricCard } from '@/components/metric-card'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Users, CrownIcon as Court, Trophy } from 'lucide-react'
+import { Users, CrownIcon as Court, Trophy, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -27,6 +27,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 import { generateSchedule } from '@/utils/scheduleGenerator'
+import { toast } from "sonner"
 
 interface Court {
   id: number;
@@ -224,6 +225,44 @@ export default function Home() {
     }
   }
 
+  const handleDelete = async (tournamentId: string) => {
+    if (!confirm('Are you sure you want to delete this tournament? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      // Delete tournament schedules first
+      const { error: scheduleError } = await supabase
+        .from('tournament_schedules')
+        .delete()
+        .eq('tournament_id', tournamentId)
+
+      if (scheduleError) {
+        console.error('Error deleting schedules:', scheduleError)
+        toast.error('Failed to delete tournament schedules')
+        return
+      }
+
+      // Then delete the tournament
+      const { error: tournamentError } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId)
+
+      if (tournamentError) {
+        console.error('Error deleting tournament:', tournamentError)
+        toast.error('Failed to delete tournament')
+        return
+      }
+
+      toast.success('Tournament deleted successfully')
+      loadTournaments()
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('An unexpected error occurred')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <TopNav />
@@ -252,15 +291,26 @@ export default function Home() {
             </DrawerTrigger>
             <DrawerContent>
               <DrawerHeader>
-                <DrawerTitle>Your Tournaments</DrawerTitle>
+                <DrawerTitle>Recent Tournaments</DrawerTitle>
               </DrawerHeader>
               <div className="p-4">
                 <Carousel>
                   <CarouselContent>
-                    {tournaments.map((tournament) => (
-                      <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3">
+                    {tournaments.slice(0, 3).map((tournament) => (
+                      <CarouselItem key={tournament.id}>
                         <Card>
-                          <CardHeader>
+                          <CardHeader className="relative">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(tournament.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                             <CardTitle>{tournament.name}</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
@@ -294,6 +344,16 @@ export default function Home() {
                   <CarouselPrevious />
                   <CarouselNext />
                 </Carousel>
+
+                <div className="mt-6 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => router.push('/tournaments/all')}
+                    className="w-full max-w-sm"
+                  >
+                    View All Tournaments
+                  </Button>
+                </div>
               </div>
             </DrawerContent>
           </Drawer>
