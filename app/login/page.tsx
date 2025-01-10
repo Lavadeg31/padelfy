@@ -62,11 +62,15 @@ export default function Login() {
 
     try {
       if (isSignUp) {
+        const redirectTo = process.env.NODE_ENV === 'production'
+          ? 'https://padel.larsv.tech/auth/callback'
+          : `${window.location.origin}/auth/callback`
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: redirectTo,
           }
         })
         
