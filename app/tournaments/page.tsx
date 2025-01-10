@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TopNav } from '@/components/top-nav'
 import { useRouter } from 'next/navigation'
+import { Trash2 } from 'lucide-react'
+import { toast } from "sonner"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
 
 interface Tournament {
   id: string
@@ -27,30 +31,73 @@ export default function Tournaments() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  const loadTournaments = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading tournaments:', error)
+        return
+      }
+
+      setTournaments(data)
+    } catch (error) {
+      console.error('Error loading tournaments:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
   useEffect(() => {
     loadTournaments()
-  }, [])
+  }, [loadTournaments])
 
-  const loadTournaments = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setLoading(false)
+  const handleDelete = async (tournamentId: string) => {
+    if (!confirm('Are you sure you want to delete this tournament? This action cannot be undone.')) {
       return
     }
 
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    try {
+      // Delete tournament schedules first
+      const { error: scheduleError } = await supabase
+        .from('tournament_schedules')
+        .delete()
+        .eq('tournament_id', tournamentId)
 
-    if (error) {
-      console.error('Error loading tournaments:', error)
-      return
+      if (scheduleError) {
+        console.error('Error deleting schedules:', scheduleError)
+        toast.error('Failed to delete tournament schedules')
+        return
+      }
+
+      // Then delete the tournament
+      const { error: tournamentError } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId)
+
+      if (tournamentError) {
+        console.error('Error deleting tournament:', tournamentError)
+        toast.error('Failed to delete tournament')
+        return
+      }
+
+      toast.success('Tournament deleted successfully')
+      loadTournaments()
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('An unexpected error occurred')
     }
-
-    setTournaments(data || [])
-    setLoading(false)
   }
 
   if (loading) {
@@ -75,44 +122,70 @@ export default function Tournaments() {
           <Button onClick={() => router.push('/')}>Create New Tournament</Button>
         </div>
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tournaments.map((tournament) => (
-            <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>{tournament.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p>Mode: {tournament.mode}</p>
-                    <p>Players: {tournament.players.length}</p>
-                    <p>Courts: {tournament.courts.length}</p>
-                    <p>Points to win: {tournament.total_points}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Created: {new Date(tournament.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="default" 
-                      className="flex-1"
-                      onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
-                    >
-                      Schedule & Scores
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
-                    >
-                      Leaderboard
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="w-full h-full">
+              View Tournaments
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Your Tournaments</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 max-h-[70vh] overflow-y-auto">
+              <Carousel>
+                <CarouselContent>
+                  {tournaments.map((tournament) => (
+                    <CarouselItem key={tournament.id} className="md:basis-1/2 lg:basis-1/3">
+                      <Card>
+                        <CardHeader className="relative">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(tournament.id)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <CardTitle>{tournament.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <p>Mode: {tournament.mode}</p>
+                            <p>Players: {tournament.players.length}</p>
+                            <p>Courts: {tournament.courts.length}</p>
+                            <p>Points to win: {tournament.total_points}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button 
+                              variant="default" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
+                              className="w-full"
+                            >
+                              Open
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
+                              className="w-full"
+                            >
+                              Leaderboard
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+            </div>
+          </DrawerContent>
+        </Drawer>
 
         {tournaments.length === 0 && (
           <Card>
