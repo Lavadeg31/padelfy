@@ -261,33 +261,41 @@ function updatePairings(
 }
 
 function generateFixedSchedule(players: string[], courts: Court[]): Game[][] {
-  const rounds: Game[][] = [];
-  const teams = players.reduce((acc, player, index, array) => {
-    if (index % 2 === 0) {
-      acc.push([player, array[index + 1]]);
-    }
-    return acc;
-  }, [] as string[][]);
+  if (players.length < 4) return [];
   
-  const totalTeams = teams.length;
-  const totalRounds = totalTeams - 1;
+  // Create fixed teams (pairs of players)
+  const teams: string[][] = [];
+  for (let i = 0; i < players.length; i += 2) {
+    teams.push([players[i], players[i + 1]]);
+  }
 
-  for (let round = 0; round < totalRounds; round++) {
+  const rounds: Game[][] = [];
+  const numTeams = teams.length;
+  const numRounds = numTeams - 1;
+
+  // For each round
+  for (let round = 0; round < numRounds; round++) {
     const roundGames: Game[] = [];
+    const availableTeams = [...teams];
     
-    for (let i = 0; i < totalTeams / 2; i++) {
-      const team1Index = i;
-      const team2Index = (totalTeams - 1 - i + round) % (totalTeams - 1);
-      const team2ActualIndex = team2Index === i ? totalTeams - 1 : team2Index;
-
+    // Create games until no more teams are available
+    while (availableTeams.length >= 2) {
+      const team1 = availableTeams.shift()!;
+      const team2 = availableTeams.shift()!;
+      
       roundGames.push({
-        court: courts[i % courts.length],
-        team1: teams[team1Index],
-        team2: teams[team2ActualIndex]
+        court: courts[roundGames.length % courts.length],
+        team1,
+        team2
       });
     }
 
-    rounds.push(roundGames);
+    if (roundGames.length > 0) {
+      rounds.push(roundGames);
+    }
+
+    // Rotate teams for next round (keep first team fixed)
+    teams.push(teams.splice(1, 1)[0]);
   }
 
   return rounds;
