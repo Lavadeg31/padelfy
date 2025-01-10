@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const [lastAttempt, setLastAttempt] = useState<number>(0)
 
   // Create Supabase client once and memoize it
   const supabase = useMemo(() => createBrowserClient(
@@ -36,6 +37,14 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Rate limiting: Only allow one attempt every 60 seconds
+    const now = Date.now()
+    if (isSignUp && now - lastAttempt < 60000) {
+      const remainingSeconds = Math.ceil((60000 - (now - lastAttempt)) / 1000)
+      setError(`Please wait ${remainingSeconds} seconds before trying again`)
+      return
+    }
+
     // Input validation
     if (!email || !password) {
       setError('Please fill in all fields')
@@ -53,6 +62,7 @@ export default function Login() {
 
     try {
       if (isSignUp) {
+        setLastAttempt(now)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -74,7 +84,6 @@ export default function Login() {
         
         if (signInError) throw signInError
 
-        // Only refresh and redirect on successful login
         router.push('/')
         router.refresh()
       }
