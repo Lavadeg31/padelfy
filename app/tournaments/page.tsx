@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { toast } from "sonner"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 interface Tournament {
   id: string
@@ -129,54 +130,68 @@ export default function Tournaments() {
           </DrawerTrigger>
           <DrawerContent>
             <DrawerHeader>
-              <DrawerTitle>Your Tournaments</DrawerTitle>
+              <DrawerTitle>Recent Tournaments</DrawerTitle>
             </DrawerHeader>
-            <div className="p-4 max-h-[70vh] overflow-y-auto">
-              <div className="overflow-x-auto pb-4">
-                <div className="grid grid-cols-3 gap-4 min-w-[900px]">
-                  {tournaments.map((tournament) => (
-                    <Card key={tournament.id}>
-                      <CardHeader className="relative">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(tournament.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <CardTitle>{tournament.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <p>Mode: {tournament.mode}</p>
-                          <p>Players: {tournament.players.length}</p>
-                          <p>Courts: {tournament.courts.length}</p>
-                          <p>Points to win: {tournament.total_points}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button 
-                            variant="default" 
-                            onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
-                            className="w-full"
+            <div className="p-4">
+              <Carousel>
+                <CarouselContent>
+                  {tournaments.slice(0, 3).map((tournament) => (
+                    <CarouselItem key={tournament.id}>
+                      <Card>
+                        <CardHeader className="relative">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(tournament.id);
+                            }}
                           >
-                            Open
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
-                            className="w-full"
-                          >
-                            Leaderboard
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                          <CardTitle>{tournament.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <p>Mode: {tournament.mode}</p>
+                            <p>Players: {tournament.players.length}</p>
+                            <p>Courts: {tournament.courts.length}</p>
+                            <p>Points to win: {tournament.total_points}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button 
+                              variant="default" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
+                              className="w-full"
+                            >
+                              Open
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
+                              className="w-full"
+                            >
+                              Leaderboard
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
                   ))}
-                </div>
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+
+              <div className="mt-6 flex justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/tournaments/all')}
+                  className="w-full max-w-sm"
+                >
+                  View All Tournaments
+                </Button>
               </div>
             </div>
           </DrawerContent>
