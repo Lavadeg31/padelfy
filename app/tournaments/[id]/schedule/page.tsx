@@ -132,10 +132,9 @@ export default function TournamentSchedule({ params }: { params: { id: string } 
                       </div>
                     </div>
                     {game.team1_score !== null && game.team2_score !== null && (
-                      <div className="flex items-center space-x-4">
-                        <span className="text-green-600 font-bold">{game.team1_score}</span>
-                        <span className="text-sm">vs</span>
-                        <span className="text-blue-600 font-bold">{game.team2_score}</span>
+                      <div className="text-right">
+                        <p className="text-green-600 font-bold">{game.team1_score}</p>
+                        <p className="text-blue-600 font-bold">{game.team2_score}</p>
                       </div>
                     )}
                   </div>
