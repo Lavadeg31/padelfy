@@ -95,9 +95,9 @@ export default function Login() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-2">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left side - Dark section */}
-      <div className="bg-black p-8 text-white flex flex-col">
+      <div className="bg-black p-4 lg:p-8 text-white">
         <div className="flex items-center space-x-2">
           <div className="h-8 w-8 rounded-full bg-white" />
           <span className="font-semibold">Padel Tournament Manager</span>
@@ -105,7 +105,7 @@ export default function Login() {
       </div>
 
       {/* Right side - Login/Signup form */}
-      <div className="p-8 flex flex-col">
+      <div className="p-4 lg:p-8 flex flex-col">
         <div className="flex justify-end">
           <Button 
             variant="ghost" 
@@ -115,13 +115,13 @@ export default function Login() {
           </Button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-sm space-y-8">
+        <div className="flex-1 flex items-center justify-center py-8">
+          <div className="w-full max-w-sm space-y-6 px-4">
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-2xl lg:text-3xl font-bold">
                 {isSignUp ? 'Create an account' : 'Welcome back'}
               </h1>
-              <p className="text-gray-500">
+              <p className="text-gray-500 text-sm lg:text-base">
                 {isSignUp 
                   ? 'Enter your email below to create your account'
                   : 'Enter your email to sign in to your account'
@@ -138,6 +138,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value.trim())}
                   required
                   disabled={isLoading}
+                  className="w-full"
                 />
                 <Input
                   type="password"
@@ -147,6 +148,7 @@ export default function Login() {
                   required
                   disabled={isLoading}
                   minLength={6}
+                  className="w-full"
                 />
               </div>
 
@@ -180,7 +182,7 @@ export default function Login() {
               )}
             </form>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-xs lg:text-sm text-muted-foreground">
               By clicking continue, you agree to our{' '}
               <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
                 Terms of Service
