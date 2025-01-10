@@ -132,49 +132,51 @@ export default function Tournaments() {
               <DrawerTitle>Your Tournaments</DrawerTitle>
             </DrawerHeader>
             <div className="p-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {tournaments.map((tournament) => (
-                  <Card key={tournament.id}>
-                    <CardHeader className="relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(tournament.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <CardTitle>{tournament.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <p>Mode: {tournament.mode}</p>
-                        <p>Players: {tournament.players.length}</p>
-                        <p>Courts: {tournament.courts.length}</p>
-                        <p>Points to win: {tournament.total_points}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button 
-                          variant="default" 
-                          onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
-                          className="w-full"
+              <div className="overflow-x-auto pb-4">
+                <div className="grid grid-cols-3 gap-4 min-w-[900px]">
+                  {tournaments.map((tournament) => (
+                    <Card key={tournament.id}>
+                      <CardHeader className="relative">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-2 text-red-500 hover:text-red-700 hover:bg-red-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(tournament.id);
+                          }}
                         >
-                          Open
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
-                          className="w-full"
-                        >
-                          Leaderboard
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <CardTitle>{tournament.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <p>Mode: {tournament.mode}</p>
+                          <p>Players: {tournament.players.length}</p>
+                          <p>Courts: {tournament.courts.length}</p>
+                          <p>Points to win: {tournament.total_points}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button 
+                            variant="default" 
+                            onClick={() => router.push(`/tournaments/${tournament.id}/schedule`)}
+                            className="w-full"
+                          >
+                            Open
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => router.push(`/tournaments/${tournament.id}/leaderboard`)}
+                            className="w-full"
+                          >
+                            Leaderboard
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           </DrawerContent>
