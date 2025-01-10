@@ -66,7 +66,7 @@ export default function Login() {
           ? 'https://padel.larsv.tech/auth/callback'
           : `${window.location.origin}/auth/callback`
 
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -79,6 +79,11 @@ export default function Login() {
             throw new Error('Please wait a few minutes before trying again')
           }
           throw signUpError
+        }
+
+        // Log signup response in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Development signup response:', data)
         }
         
         setMessage('Check your email for the confirmation link! You will be redirected automatically after confirming.')
