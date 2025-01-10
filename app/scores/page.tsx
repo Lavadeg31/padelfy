@@ -14,9 +14,12 @@ interface Court {
 }
 
 interface Game {
-  court: Court;
+  id: string;
+  team1_score: number;
+  team2_score: number;
   team1: string[];
   team2: string[];
+  court: Court;
 }
 
 interface GameScore {
@@ -139,8 +142,10 @@ export default function Scores() {
                         <Input
                           type="number"
                           value={scores[currentRound]?.[gameIndex]?.team2Score || 0}
+                          onChange={(e) => handleScoreChange(gameIndex, 'team2Score', e.target.value)}
                           className="w-20"
-                          readOnly
+                          min="0"
+                          max={totalPoints}
                         />
                       </div>
                     </div>
