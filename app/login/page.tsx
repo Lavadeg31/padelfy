@@ -15,8 +15,6 @@ export default function Login() {
   const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [lastSignupAttempt, setLastSignupAttempt] = useState<number>(0)
-  const COOLDOWN_PERIOD = 60000 * 15 // 15 minutes in milliseconds (1/4 of an hour)
   const router = useRouter()
 
   // Create Supabase client once and memoize it
