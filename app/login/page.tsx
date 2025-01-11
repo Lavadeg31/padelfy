@@ -23,7 +23,13 @@ export default function Login() {
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Check if we already have a session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.href = '/'
+      }
+    })
+  }, [supabase.auth])
 
   // Reset error and message when switching modes
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function Login() {
       } else {
         console.log('Attempting sign in...')
         
-        // Sign in with password
+        // First, sign in with password
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -91,20 +97,24 @@ export default function Login() {
         if (data?.session) {
           console.log('Session created, setting up...')
           
-          // Set the session in the browser
-          await supabase.auth.setSession(data.session)
-          
-          // Double check the session is set
-          const { data: sessionCheck } = await supabase.auth.getSession()
-          
-          console.log('Session verification:', {
-            hasSession: !!sessionCheck.session,
-            accessToken: !!sessionCheck.session?.access_token,
-            refreshToken: !!sessionCheck.session?.refresh_token
-          })
-
-          // Redirect to home page
-          window.location.href = '/'
+          try {
+            // Explicitly set the session
+            await supabase.auth.setSession(data.session)
+            
+            // Verify the session was set
+            const { data: sessionCheck } = await supabase.auth.getSession()
+            
+            if (sessionCheck.session) {
+              console.log('Session verified, redirecting...')
+              // Force a full page reload to ensure cookies are set
+              window.location.replace('/')
+            } else {
+              throw new Error('Session verification failed')
+            }
+          } catch (sessionError) {
+            console.error('Session setup error:', sessionError)
+            throw new Error('Failed to establish session')
+          }
         } else {
           throw new Error('No session created')
         }
