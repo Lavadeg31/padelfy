@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,60 +10,122 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const supabase = createBrowserClient(
+  // Create Supabase client once and memoize it
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  ), [])
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Reset error and message when switching modes
+  useEffect(() => {
+    setError(null)
+    setMessage(null)
+  }, [isSignUp])
+
+  useEffect(() => {
+    // Check for error parameter in URL
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    if (error === 'verification_failed') {
+      setError('Email verification failed. Please try again.')
+    }
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    setMessage('')
+
+    // Input validation
+    if (!email || !password) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    setError(null)
+    setMessage(null)
     setIsLoading(true)
 
     try {
       if (isSignUp) {
-        // Handle Sign Up
-        const { error } = await supabase.auth.signUp({
+        const redirectTo = process.env.NODE_ENV === 'production'
+          ? 'https://padel.larsv.tech/auth/callback'
+          : `${window.location.origin}/auth/callback`
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: process.env.NODE_ENV === 'production'
-              ? 'https://padel.larsv.tech/auth/callback'
-              : `${window.location.origin}/auth/callback`
+            emailRedirectTo: redirectTo,
           }
         })
+        
+        if (signUpError) {
+          if (signUpError.message.includes('rate limit')) {
+            throw new Error('Please wait a few minutes before trying again')
+          }
+          throw signUpError
+        }
 
-        if (error) throw error
-
-        setMessage('Check your email for the confirmation link.')
+        // Log signup response in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Development signup response:', data)
+        }
+        
+        setMessage('Check your email for the confirmation link! You will be redirected automatically after confirming.')
         setEmail('')
         setPassword('')
       } else {
-        // Handle Sign In
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('Attempting sign in...')
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
-          password
+          password,
         })
+        
+        if (signInError) throw signInError
 
-        if (error) throw error
+        // Wait for session to be set
+        if (data?.session) {
+          console.log('Session created, refreshing...')
+          // Ensure cookies are set before redirecting
+          const { data: sessionData } = await supabase.auth.getSession()
+          console.log('Session refreshed:', sessionData.session ? 'success' : 'failed')
 
-        // Redirect to home page
-        window.location.href = '/'
+          // Use a longer delay to ensure cookies are properly set
+          setTimeout(() => {
+            console.log('Redirecting to home...')
+            window.location.href = '/'
+          }, 1000)
+        } else {
+          throw new Error('No session created')
+        }
       }
     } catch (error) {
+      console.error('Auth error:', error)
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError('An error occurred')
+        setError('An error occurred during authentication')
       }
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!mounted) {
+    return null
   }
 
   return (
@@ -81,11 +143,7 @@ export default function Login() {
         <div className="flex justify-end">
           <Button 
             variant="ghost" 
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setError('')
-              setMessage('')
-            }}
+            onClick={() => setIsSignUp(!isSignUp)}
           >
             {isSignUp ? 'Login' : 'Create account'}
           </Button>
