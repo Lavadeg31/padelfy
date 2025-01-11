@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
       '/auth/callback',
       '/_next',
       '/api',
-      '/',
       '/public',
       '/static',
       '/favicon.ico'
