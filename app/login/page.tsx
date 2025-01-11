@@ -5,10 +5,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 export default function Login() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
@@ -25,13 +23,7 @@ export default function Login() {
 
   useEffect(() => {
     setMounted(true)
-    // Check if we have a session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push('/')
-      }
-    })
-  }, [router, supabase.auth])
+  }, [])
 
   // Reset error and message when switching modes
   useEffect(() => {
@@ -86,6 +78,7 @@ export default function Login() {
         setEmail('')
         setPassword('')
       } else {
+        console.log('Attempting sign in...')
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -94,8 +87,16 @@ export default function Login() {
         if (signInError) throw signInError
 
         if (data?.session) {
-          // Use router.push instead of window.location
-          router.push('/')
+          console.log('Session created, refreshing...')
+          // Ensure cookies are set before redirecting
+          const { data: sessionData } = await supabase.auth.getSession()
+          console.log('Session refreshed:', sessionData.session ? 'success' : 'failed')
+
+          // Use a longer delay to ensure cookies are properly set
+          setTimeout(() => {
+            console.log('Redirecting to home...')
+            window.location.href = '/'
+          }, 1000)
         } else {
           throw new Error('No session created')
         }
