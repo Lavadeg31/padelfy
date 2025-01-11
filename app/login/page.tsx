@@ -79,6 +79,8 @@ export default function Login() {
         setPassword('')
       } else {
         console.log('Attempting sign in...')
+        
+        // Sign in with password
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -87,29 +89,22 @@ export default function Login() {
         if (signInError) throw signInError
 
         if (data?.session) {
-          console.log('Session created, refreshing...')
+          console.log('Session created, setting up...')
           
-          // Ensure cookies are set before redirecting
-          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-          console.log('Session refresh result:', {
-            success: !!sessionData.session,
-            error: sessionError,
-            cookies: document.cookie
+          // Set the session in the browser
+          await supabase.auth.setSession(data.session)
+          
+          // Double check the session is set
+          const { data: sessionCheck } = await supabase.auth.getSession()
+          
+          console.log('Session verification:', {
+            hasSession: !!sessionCheck.session,
+            accessToken: !!sessionCheck.session?.access_token,
+            refreshToken: !!sessionCheck.session?.refresh_token
           })
 
-          if (sessionData.session) {
-            // Set a flag in localStorage to indicate we're in the process of logging in
-            localStorage.setItem('logging_in', 'true')
-            
-            // Use a longer delay to ensure cookies are properly set
-            setTimeout(() => {
-              console.log('Cookies before redirect:', document.cookie)
-              console.log('Redirecting to home...')
-              window.location.href = '/'
-            }, 2000)
-          } else {
-            throw new Error('Failed to refresh session')
-          }
+          // Redirect to home page
+          window.location.href = '/'
         } else {
           throw new Error('No session created')
         }
