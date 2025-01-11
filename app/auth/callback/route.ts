@@ -6,7 +6,6 @@ export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url)
     const code = requestUrl.searchParams.get('code')
-    const next = requestUrl.searchParams.get('next') || '/'
     
     if (!code) {
       throw new Error('No code provided')
