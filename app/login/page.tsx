@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,129 +10,60 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
-  // Create Supabase client once and memoize it
-  const supabase = useMemo(() => createBrowserClient(
+  const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), [])
+  )
 
-  useEffect(() => {
-    setMounted(true)
-    // Check if we already have a session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.location.href = '/'
-      }
-    })
-  }, [supabase.auth])
-
-  // Reset error and message when switching modes
-  useEffect(() => {
-    setError(null)
-    setMessage(null)
-  }, [isSignUp])
-
-  useEffect(() => {
-    // Check for error parameter in URL
-    const params = new URLSearchParams(window.location.search)
-    const error = params.get('error')
-    if (error === 'verification_failed') {
-      setError('Email verification failed. Please try again.')
-    }
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
-    // Input validation
-    if (!email || !password) {
-      setError('Please fill in all fields')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
-    setError(null)
-    setMessage(null)
+    setError('')
+    setMessage('')
     setIsLoading(true)
 
     try {
       if (isSignUp) {
-        const redirectTo = process.env.NODE_ENV === 'production'
-          ? 'https://padel.larsv.tech/auth/callback'
-          : `${window.location.origin}/auth/callback`
-
-        const { error: signUpError } = await supabase.auth.signUp({
+        // Handle Sign Up
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: redirectTo,
+            emailRedirectTo: process.env.NODE_ENV === 'production'
+              ? 'https://padel.larsv.tech/auth/callback'
+              : `${window.location.origin}/auth/callback`
           }
         })
-        
-        if (signUpError) throw signUpError
-        
-        setMessage('Check your email for the confirmation link! You will be redirected automatically after confirming.')
+
+        if (error) throw error
+
+        setMessage('Check your email for the confirmation link.')
         setEmail('')
         setPassword('')
       } else {
-        console.log('Attempting sign in...')
-        
-        // First, sign in with password
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        // Handle Sign In
+        const { error } = await supabase.auth.signInWithPassword({
           email,
-          password,
+          password
         })
-        
-        if (signInError) throw signInError
 
-        if (data?.session) {
-          console.log('Session created, setting up...')
-          
-          try {
-            // Explicitly set the session
-            await supabase.auth.setSession(data.session)
-            
-            // Verify the session was set
-            const { data: sessionCheck } = await supabase.auth.getSession()
-            
-            if (sessionCheck.session) {
-              console.log('Session verified, redirecting...')
-              // Force a full page reload to ensure cookies are set
-              window.location.replace('/')
-            } else {
-              throw new Error('Session verification failed')
-            }
-          } catch (sessionError) {
-            console.error('Session setup error:', sessionError)
-            throw new Error('Failed to establish session')
-          }
-        } else {
-          throw new Error('No session created')
-        }
+        if (error) throw error
+
+        // Redirect to home page
+        window.location.href = '/'
       }
     } catch (error) {
-      console.error('Auth error:', error)
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError('An error occurred during authentication')
+        setError('An error occurred')
       }
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (!mounted) {
-    return null
   }
 
   return (
@@ -150,7 +81,11 @@ export default function Login() {
         <div className="flex justify-end">
           <Button 
             variant="ghost" 
-            onClick={() => setIsSignUp(!isSignUp)}
+            onClick={() => {
+              setIsSignUp(!isSignUp)
+              setError('')
+              setMessage('')
+            }}
           >
             {isSignUp ? 'Login' : 'Create account'}
           </Button>
