@@ -62,7 +62,6 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        // Ensure full URL with protocol
         const redirectTo = process.env.NODE_ENV === 'production'
           ? 'https://padel.larsv.tech/auth/callback'
           : `${window.location.origin}/auth/callback`
@@ -72,9 +71,6 @@ export default function Login() {
           password,
           options: {
             emailRedirectTo: redirectTo,
-            data: {
-              redirect_url: redirectTo // Add this for email template
-            }
           }
         })
         
@@ -88,25 +84,26 @@ export default function Login() {
         // Log signup response in development
         if (process.env.NODE_ENV === 'development') {
           console.log('Development signup response:', data)
-          // Log the constructed URL for debugging
-          if (data.user?.confirmation_sent_at) {
-            console.log('Verification URL will redirect to:', redirectTo)
-          }
         }
         
         setMessage('Check your email for the confirmation link! You will be redirected automatically after confirming.')
         setEmail('')
         setPassword('')
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         
         if (signInError) throw signInError
 
-        router.push('/')
-        router.refresh()
+        // Wait for session to be set
+        if (data?.session) {
+          // Force a full page reload to ensure the session is properly set
+          window.location.href = '/'
+        } else {
+          throw new Error('No session created')
+        }
       }
     } catch (error) {
       console.error('Auth error:', error)
