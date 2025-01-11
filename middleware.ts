@@ -15,13 +15,25 @@ export async function middleware(request: NextRequest) {
       console.error('Session refresh error:', error)
     }
 
+    // List of paths that don't require authentication
+    const publicPaths = [
+      '/login',
+      '/auth/callback',
+      '/_next',
+      '/api',
+      '/public',
+      '/static',
+      '/favicon.ico'
+    ]
+
+    // Check if the current path is public
+    const isPublicPath = publicPaths.some(path => 
+      request.nextUrl.pathname.startsWith(path)
+    )
+
     // If no session and trying to access protected route, redirect to login
-    if (!session && 
-        !request.nextUrl.pathname.startsWith('/login') && 
-        !request.nextUrl.pathname.startsWith('/auth/callback') &&
-        !request.nextUrl.pathname.startsWith('/_next') &&
-        !request.nextUrl.pathname.startsWith('/api') &&
-        request.nextUrl.pathname !== '/') {
+    if (!session && !isPublicPath) {
+      console.log('No session, redirecting to login from:', request.nextUrl.pathname)
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
