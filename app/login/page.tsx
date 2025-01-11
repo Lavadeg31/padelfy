@@ -88,15 +88,28 @@ export default function Login() {
 
         if (data?.session) {
           console.log('Session created, refreshing...')
+          
           // Ensure cookies are set before redirecting
-          const { data: sessionData } = await supabase.auth.getSession()
-          console.log('Session refreshed:', sessionData.session ? 'success' : 'failed')
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+          console.log('Session refresh result:', {
+            success: !!sessionData.session,
+            error: sessionError,
+            cookies: document.cookie
+          })
 
-          // Use a longer delay to ensure cookies are properly set
-          setTimeout(() => {
-            console.log('Redirecting to home...')
-            window.location.href = '/'
-          }, 1000)
+          if (sessionData.session) {
+            // Set a flag in localStorage to indicate we're in the process of logging in
+            localStorage.setItem('logging_in', 'true')
+            
+            // Use a longer delay to ensure cookies are properly set
+            setTimeout(() => {
+              console.log('Cookies before redirect:', document.cookie)
+              console.log('Redirecting to home...')
+              window.location.href = '/'
+            }, 2000)
+          } else {
+            throw new Error('Failed to refresh session')
+          }
         } else {
           throw new Error('No session created')
         }
