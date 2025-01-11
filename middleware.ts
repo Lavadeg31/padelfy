@@ -4,31 +4,25 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
-    // Log all cookies for debugging
-    console.log('Request cookies:', {
-      all: request.cookies.getAll(),
-      supabase: request.cookies.get('sb-xwerwkxdpnhquvjrkxfy-auth-token'),
-      path: request.nextUrl.pathname
-    })
-
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req: request, res })
+
+    // Get the session cookie directly
+    const authCookie = request.cookies.get('sb-xwerwkxdpnhquvjrkxfy-auth-token')
+    console.log('Auth Cookie Present:', !!authCookie?.value)
 
     // Refresh session if expired
     const { data: { session }, error } = await supabase.auth.getSession()
 
-    // Log session state
-    console.log('Session state:', {
-      hasSession: !!session,
-      error: error?.message,
+    // Log detailed session info
+    console.log('Auth State:', {
       path: request.nextUrl.pathname,
-      userId: session?.user?.id
+      hasAuthCookie: !!authCookie?.value,
+      hasSession: !!session,
+      sessionError: error?.message || null,
+      userId: session?.user?.id || null,
+      cookieValue: authCookie?.value ? 'present' : 'missing'
     })
-
-    // Handle session refresh errors
-    if (error) {
-      console.error('Session refresh error:', error)
-    }
 
     // List of paths that don't require authentication
     const publicPaths = [
@@ -48,7 +42,11 @@ export async function middleware(request: NextRequest) {
 
     // If no session and trying to access protected route, redirect to login
     if (!session && !isPublicPath) {
-      console.log('No session, redirecting to login from:', request.nextUrl.pathname)
+      console.log('Redirecting to login:', {
+        from: request.nextUrl.pathname,
+        reason: 'No active session',
+        hasAuthCookie: !!authCookie
+      })
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
@@ -57,29 +55,25 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Add debug headers to response
-    res.headers.set('x-session-status', session ? 'active' : 'none')
-    res.headers.set('x-path-type', isPublicPath ? 'public' : 'protected')
+    // Copy the session cookie to the response
+    if (authCookie?.value) {
+      res.cookies.set('sb-xwerwkxdpnhquvjrkxfy-auth-token', authCookie.value, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/'
+      })
+    }
 
-    // Important: return the response with the refreshed session cookie
     return res
   } catch (e) {
-    // If there's an error, redirect to login
     console.error('Middleware error:', e)
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }
 
-// Update matcher to include all routes that need session checking
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
     '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 } 
