@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
@@ -15,7 +14,6 @@ export default function Login() {
   const [message, setMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const router = useRouter()
 
   // Create Supabase client once and memoize it
   const supabase = useMemo(() => createBrowserClient(
