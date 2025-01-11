@@ -88,6 +88,7 @@ export default function Login() {
         setEmail('')
         setPassword('')
       } else {
+        console.log('Attempting sign in...')
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -97,12 +98,16 @@ export default function Login() {
 
         // Wait for session to be set
         if (data?.session) {
+          console.log('Session created, refreshing...')
           // Ensure cookies are set before redirecting
-          await supabase.auth.getSession()
-          // Use a small delay to ensure cookies are properly set
+          const { data: sessionData } = await supabase.auth.getSession()
+          console.log('Session refreshed:', sessionData.session ? 'success' : 'failed')
+
+          // Use a longer delay to ensure cookies are properly set
           setTimeout(() => {
+            console.log('Redirecting to home...')
             window.location.href = '/'
-          }, 500)
+          }, 1000)
         } else {
           throw new Error('No session created')
         }
