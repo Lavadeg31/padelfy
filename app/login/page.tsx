@@ -97,8 +97,12 @@ export default function Login() {
 
         // Wait for session to be set
         if (data?.session) {
-          // Force a full page reload to ensure the session is properly set
-          window.location.href = '/'
+          // Ensure cookies are set before redirecting
+          await supabase.auth.getSession()
+          // Use a small delay to ensure cookies are properly set
+          setTimeout(() => {
+            window.location.href = '/'
+          }, 500)
         } else {
           throw new Error('No session created')
         }
