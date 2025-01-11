@@ -4,24 +4,42 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
+    // Create a response and get the client
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req: request, res })
 
     // Refresh session if expired
     const { data: { session }, error } = await supabase.auth.getSession()
 
+    // Debug session state
+    console.log('Current path:', request.nextUrl.pathname)
+    console.log('Session state:', session ? 'Logged in' : 'No session')
+
     // Handle session refresh errors
     if (error) {
       console.error('Session refresh error:', error)
     }
 
+    // List of public paths that don't require authentication
+    const publicPaths = [
+      '/login',
+      '/auth/callback',
+      '/_next',
+      '/api',
+      '/',
+      '/public',
+      '/static',
+      '/favicon.ico'
+    ]
+
+    // Check if the current path is public
+    const isPublicPath = publicPaths.some(path => 
+      request.nextUrl.pathname.startsWith(path)
+    )
+
     // If no session and trying to access protected route, redirect to login
-    if (!session && 
-        !request.nextUrl.pathname.startsWith('/login') && 
-        !request.nextUrl.pathname.startsWith('/auth/callback') &&
-        !request.nextUrl.pathname.startsWith('/_next') &&
-        !request.nextUrl.pathname.startsWith('/api') &&
-        request.nextUrl.pathname !== '/') {
+    if (!session && !isPublicPath) {
+      console.log('Redirecting to login from:', request.nextUrl.pathname)
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
@@ -30,10 +48,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Important: return the response with the refreshed session cookie
+    // Add session user to request headers for debugging
+    if (session) {
+      res.headers.set('x-user-id', session.user.id)
+    }
+
     return res
   } catch (e) {
-    // If there's an error, redirect to login
     console.error('Middleware error:', e)
     return NextResponse.redirect(new URL('/login', request.url))
   }
