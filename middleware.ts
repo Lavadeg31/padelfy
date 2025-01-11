@@ -10,17 +10,21 @@ export async function middleware(request: NextRequest) {
     // Create the Supabase client
     const supabase = createMiddlewareClient({ req: request, res })
 
-    // Refresh the session
-    const { data: { session }, error } = await supabase.auth.getSession()
+    // Try to get the session
+    const {
+      data: { session },
+      error: sessionError
+    } = await supabase.auth.getSession()
 
-    // Debug info
-    console.log('Middleware Check:', {
+    // Log session state for debugging
+    console.log('Auth Check:', {
       path: request.nextUrl.pathname,
       hasSession: !!session,
+      sessionError: sessionError?.message,
       cookies: request.cookies.getAll().map(c => c.name)
     })
 
-    // List of public paths
+    // List of paths that don't require authentication
     const publicPaths = [
       '/login',
       '/auth/callback',
@@ -35,21 +39,35 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith(path)
     )
 
+    // If there's a session error, clear the session and redirect to login
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      const response = NextResponse.redirect(new URL('/login', request.url))
+      await supabase.auth.signOut()
+      return response
+    }
+
     // Handle protected routes
     if (!session && !isPublicPath) {
+      console.log('No session, redirecting to login')
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
     // Handle login page access when already logged in
     if (session && request.nextUrl.pathname === '/login') {
+      console.log('Session exists, redirecting to home')
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Important: return the response with the session cookie
+    // Add the user session to the response
     return res
   } catch (e) {
     console.error('Middleware error:', e)
-    return NextResponse.redirect(new URL('/login', request.url))
+    // On error, redirect to login and clear the session
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    const supabase = createMiddlewareClient({ req: request, res: response })
+    await supabase.auth.signOut()
+    return response
   }
 }
 
