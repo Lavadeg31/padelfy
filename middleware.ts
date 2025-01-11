@@ -4,11 +4,25 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
+    // Create a response and get the client
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req: request, res })
 
-    // Refresh session if expired
-    const { data: { session } } = await supabase.auth.getSession()
+    // Refresh session if expired and get session data
+    const {
+      data: { session },
+      error
+    } = await supabase.auth.getSession()
+
+    // Debug session state
+    console.log('Current path:', request.nextUrl.pathname)
+    console.log('Session state:', session ? 'Logged in' : 'No session')
+    console.log('Cookies:', request.cookies.getAll())
+
+    // Handle session refresh errors
+    if (error) {
+      console.error('Session refresh error:', error)
+    }
 
     // List of public paths that don't require authentication
     const publicPaths = [
@@ -28,12 +42,19 @@ export async function middleware(request: NextRequest) {
 
     // If no session and trying to access protected route, redirect to login
     if (!session && !isPublicPath) {
+      console.log('No session found, redirecting to login')
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
     // If session exists and trying to access login, redirect to home
     if (session && request.nextUrl.pathname === '/login') {
+      console.log('Session found, redirecting to home')
       return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Add session user to request headers for debugging
+    if (session) {
+      res.headers.set('x-user-id', session.user.id)
     }
 
     return res
