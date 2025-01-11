@@ -22,7 +22,12 @@ export async function GET(request: Request) {
       throw error
     }
 
-    // Return HTML that shows success message and closes the tab
+    // Get the site URL
+    const siteUrl = process.env.NODE_ENV === 'production'
+      ? 'https://padel.larsv.tech'
+      : requestUrl.origin
+
+    // Return HTML that shows success message and redirects
     return new NextResponse(
       `<!DOCTYPE html>
       <html>
@@ -68,16 +73,11 @@ export async function GET(request: Request) {
           <div class="container">
             <div class="success-icon">✓</div>
             <h1>Email Verified Successfully!</h1>
-            <p>You can close this tab and return to the app.</p>
+            <p>Redirecting to dashboard...</p>
           </div>
           <script>
-            // Close the tab after 3 seconds
-            setTimeout(() => {
-              window.close();
-              // If window.close() fails (which it might in some browsers),
-              // redirect to the main app
-              window.location.href = '${process.env.NODE_ENV === 'production' ? 'https://padel.larsv.tech' : requestUrl.origin}';
-            }, 3000);
+            // Redirect immediately to dashboard
+            window.location.href = '${siteUrl}';
           </script>
         </body>
       </html>`,
