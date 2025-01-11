@@ -3,11 +3,16 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next()
-  const supabase = createMiddlewareClient({ req: request, res: response })
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req: request, res })
 
   // Refresh session if expired
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  // Handle session refresh errors
+  if (error) {
+    console.error('Session refresh error:', error)
+  }
 
   // If no session and trying to access protected route, redirect to login
   if (!session && 
@@ -16,17 +21,15 @@ export async function middleware(request: NextRequest) {
       !request.nextUrl.pathname.startsWith('/_next') &&
       !request.nextUrl.pathname.startsWith('/api') &&
       request.nextUrl.pathname !== '/') {
-    const redirectUrl = new URL('/login', request.url)
-    return NextResponse.redirect(redirectUrl)
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // If session exists and trying to access login, redirect to home
   if (session && request.nextUrl.pathname.startsWith('/login')) {
-    const redirectUrl = new URL('/', request.url)
-    return NextResponse.redirect(redirectUrl)
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return response
+  return res
 }
 
 // Specify which routes to run the middleware on
