@@ -4,11 +4,26 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
+    // Log all cookies for debugging
+    console.log('Request cookies:', {
+      all: request.cookies.getAll(),
+      supabase: request.cookies.get('sb-xwerwkxdpnhquvjrkxfy-auth-token'),
+      path: request.nextUrl.pathname
+    })
+
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req: request, res })
 
     // Refresh session if expired
     const { data: { session }, error } = await supabase.auth.getSession()
+
+    // Log session state
+    console.log('Session state:', {
+      hasSession: !!session,
+      error: error?.message,
+      path: request.nextUrl.pathname,
+      userId: session?.user?.id
+    })
 
     // Handle session refresh errors
     if (error) {
@@ -41,6 +56,10 @@ export async function middleware(request: NextRequest) {
     if (session && request.nextUrl.pathname.startsWith('/login')) {
       return NextResponse.redirect(new URL('/', request.url))
     }
+
+    // Add debug headers to response
+    res.headers.set('x-session-status', session ? 'active' : 'none')
+    res.headers.set('x-path-type', isPublicPath ? 'public' : 'protected')
 
     // Important: return the response with the refreshed session cookie
     return res
