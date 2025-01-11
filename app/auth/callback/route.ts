@@ -16,19 +16,13 @@ export async function GET(request: Request) {
 
     const supabase = createRouteHandlerClient({ cookies })
     
-    // Exchange the code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (error) {
       console.error('Error exchanging code for session:', error)
       throw error
     }
 
-    // Get the site URL
-    const siteUrl = process.env.NODE_ENV === 'production'
-      ? 'https://padel.larsv.tech'
-      : requestUrl.origin
-
-    // Return HTML that shows success message and redirects
+    // Return HTML that shows success message and closes the tab
     return new NextResponse(
       `<!DOCTYPE html>
       <html>
@@ -74,13 +68,16 @@ export async function GET(request: Request) {
           <div class="container">
             <div class="success-icon">✓</div>
             <h1>Email Verified Successfully!</h1>
-            <p>Redirecting to dashboard...</p>
+            <p>You can close this tab and return to the app.</p>
           </div>
           <script>
-            // Wait for session to be properly set
+            // Close the tab after 3 seconds
             setTimeout(() => {
-              window.location.href = '${siteUrl}';
-            }, 2000);
+              window.close();
+              // If window.close() fails (which it might in some browsers),
+              // redirect to the main app
+              window.location.href = '${process.env.NODE_ENV === 'production' ? 'https://padel.larsv.tech' : requestUrl.origin}';
+            }, 3000);
           </script>
         </body>
       </html>`,
