@@ -72,23 +72,12 @@ export default function Login() {
           }
         })
         
-        if (signUpError) {
-          if (signUpError.message.includes('rate limit')) {
-            throw new Error('Please wait a few minutes before trying again')
-          }
-          throw signUpError
-        }
-
-        // Log signup response in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Development signup response:', data)
-        }
+        if (signUpError) throw signUpError
         
         setMessage('Check your email for the confirmation link! You will be redirected automatically after confirming.')
         setEmail('')
         setPassword('')
       } else {
-        console.log('Attempting sign in...')
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -96,18 +85,9 @@ export default function Login() {
         
         if (signInError) throw signInError
 
-        // Wait for session to be set
         if (data?.session) {
-          console.log('Session created, refreshing...')
-          // Ensure cookies are set before redirecting
-          const { data: sessionData } = await supabase.auth.getSession()
-          console.log('Session refreshed:', sessionData.session ? 'success' : 'failed')
-
-          // Use a longer delay to ensure cookies are properly set
-          setTimeout(() => {
-            console.log('Redirecting to home...')
-            window.location.href = '/'
-          }, 1000)
+          // Redirect to home page
+          window.location.href = '/'
         } else {
           throw new Error('No session created')
         }
